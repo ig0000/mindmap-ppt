@@ -136,7 +136,7 @@ function resolveImagePath(path) {
     return path;
   }
 
-  return `./project/assets/illustrations/${path}`;
+  return `./project/${path}`;
 }
 
 function collectPreorder(node, list = []) {

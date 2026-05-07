@@ -1,6 +1,6 @@
 ---
 name: mindmap-ppt-builder
-description: Create or update content for the agegr/mindmap-ppt static presentation project from a prose draft, article, speech, report, or notes. Use when Codex needs to turn a written document into the project's project/source.js Markdown mind-map data, choose which nodes need illustrations, generate or request GPT Image 2 illustrations matching the project's restrained presentation style, place assets under project/assets/illustrations, and validate the result with npm run check.
+description: Create or update content for the agegr/mindmap-ppt static presentation project from a prose draft, article, speech, report, or notes. Use when Codex needs to turn a written document into the project's project/source.js Markdown mind-map data, choose which nodes need illustrations, generate or request GPT Image 2 illustrations matching the project's restrained presentation style, place assets under project/, and validate the result with npm run check.
 ---
 
 # Mindmap PPT Builder
@@ -17,7 +17,8 @@ Use this skill inside the `agegr/mindmap-ppt` repository root.
 
 - If the repository is not available locally, clone `https://github.com/agegr/mindmap-ppt` first.
 - After cloning or opening the repo, run this skill from the repo root that contains `package.json`, `index.html`, `src/`, and `project/`.
-- Normal skill output should modify only `project/source.js` and files under `project/assets/illustrations/`.
+- Keep the application repository outside the skill folder. Do not copy or clone `index.html`, `src/`, or `project/` into `.agents/skills/mindmap-ppt-builder/`.
+- Normal skill output should modify only `project/source.js` and local asset files under `project/`.
 - Do not edit `src/`, `index.html`, or application behavior unless the user explicitly asks for implementation changes.
 
 ## Workflow
@@ -42,7 +43,7 @@ Use the first line as a short category label and the second line as the main mes
    - Prefer nodes that summarize a process, architecture, comparison, timeline, metric, or conceptual model.
    - Do not image every leaf.
    - Avoid images for purely transitional or obvious nodes.
-5. Generate illustrations for chosen nodes with GPT Image 2 or the available image generation tool. Save them under `project/assets/illustrations/`.
+5. Generate illustrations for chosen nodes with GPT Image 2 or the available image generation tool. Save them under `project/` or a subfolder of `project/`.
    - If API details are needed, consult current official OpenAI image generation docs before writing code or commands.
 6. Reference images in Markdown metadata lines:
 
@@ -82,8 +83,8 @@ If the source needs a real chart, diagram, or screenshot, create a simple diagra
 - Put implementation details and examples in leaves; put conclusions in ancestors.
 - Use `@image` only after the node's title line, before its children.
 - Use PNG, JPG/JPEG, or SVG assets.
-- Save image files under `project/assets/illustrations/`.
-- Prefer short `@image` values relative to that folder, e.g. `@image user-journey.png` or `@image diagrams/user-journey.png`.
+- Save image files under `project/` or a subfolder of `project/`.
+- Prefer short `@image` values relative to `project/`, e.g. `@image user-journey.png`, `@image diagrams/user-journey.png`, or `@image image-asset-1/a.jpg`.
 - If no image-generation tool is available, still add good `@image` filenames only if you create placeholder assets; otherwise omit `@image` and tell the user images were not generated.
 
 ## Validation Checklist
@@ -91,7 +92,7 @@ If the source needs a real chart, diagram, or screenshot, create a simple diagra
 - `project/source.js` exports `sourceMarkdown`.
 - Markdown indentation uses 4 spaces per level for child nodes.
 - Continuation lines use the same indentation as metadata/text for that node.
-- `@image` values are short paths relative to `project/assets/illustrations/`, unless a full URL or explicit relative path is required.
+- `@image` values are short paths relative to `project/`, unless a full URL or explicit relative path is required.
 - Asset files exist for every `@image`.
 - Root has two lines: eyebrow/subtitle then main title.
 - `npm run check` passes.

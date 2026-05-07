@@ -31,7 +31,7 @@ This is a small static front-end demo for a PPT-like animated mind map.
   - second line -> normal-size title
 - Single-line labels render as a normal one-line node title.
 - Control readouts may collapse multiline labels into an inline preview such as `副标题 / 主标题`.
-- A node may optionally attach one illustration with an `@image` metadata continuation line. Use paths relative to `project/assets/illustrations/`:
+- A node may optionally attach one illustration with an `@image` metadata continuation line. Use paths relative to `project/`:
 
 ```md
 - 展示设计
@@ -43,8 +43,9 @@ This is a small static front-end demo for a PPT-like animated mind map.
   - They do not appear in node text.
   - A node may have at most one image.
   - Supported image formats are whatever browser `<img>` supports; use PNG, JPG/JPEG, or SVG for project assets.
-  - Prefer short local paths such as `example.svg`, `example.png`, or `diagrams/example.jpg`; they resolve to `./project/assets/illustrations/...`.
-  - Full relative paths such as `./project/assets/illustrations/example.svg`, absolute paths, data URLs, and HTTP(S) URLs remain supported when needed.
+  - Prefer short local paths such as `example.svg`, `example.png`, or `image-asset-1/a.jpg`; they resolve to `./project/...`.
+  - For example, `@image image-asset-1/a.jpg` resolves to `./project/image-asset-1/a.jpg`.
+  - Explicit relative paths such as `./project/image-asset-1/a.jpg`, absolute paths, data URLs, and HTTP(S) URLs remain supported when needed.
   - If multiple `@image` lines are added to one node, the latest parsed value wins.
 - Illustrations render inside their node card:
   - selected image nodes show the image expanded below the node text
@@ -64,7 +65,7 @@ The dev server is a dependency-free Node.js static server. If `5173` is occupied
 
 - `index.html`: page shell and top controls.
 - `project/source.js`: project Markdown data. Replace this file to change the mind map content.
-- `project/assets/illustrations/`: project illustration assets referenced by `@image`.
+- `project/`: project Markdown data and local assets referenced by `@image`.
 - `src/main.js`: imports project data, parses Markdown, handles preorder navigation, layout model, HTML node sync, SVG link sync.
 - `src/styles.css`: page styling, node/link styling, slider styling, animations.
 - `p.md`: original product prompt/spec.

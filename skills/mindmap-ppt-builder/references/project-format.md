@@ -7,7 +7,7 @@ Target repo: `https://github.com/agegr/mindmap-ppt`
 Core files:
 
 - `project/source.js`: project content and image references.
-- `project/assets/illustrations/`: local illustration assets.
+- `project/`: project content and local illustration assets.
 - `src/main.js`: parser, navigation, layout, camera, node/image rendering.
 - `src/styles.css`: visual style and animations.
 - `AGENTS.md`: source-of-truth project rules.
@@ -31,7 +31,8 @@ Parsing rules:
 - Lines matching `- text` create nodes.
 - Indented continuation lines add to the current node label.
 - `@image path` attaches one image to the current node and is not visible text.
-- Short image paths such as `overview.png` resolve to `./project/assets/illustrations/overview.png`.
+- Short image paths such as `overview.png` resolve to `./project/overview.png`.
+- Nested short paths such as `image-asset-1/a.jpg` resolve to `./project/image-asset-1/a.jpg`.
 - Explicit paths beginning with `./`, `../`, `/`, `http:`, `https:`, or `data:` are used as-is.
 - Multiple `@image` lines on one node: last one wins.
 - The tree is traversed preorder.
