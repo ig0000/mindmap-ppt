@@ -14,6 +14,7 @@ const zoomSlider = document.querySelector("#zoomSlider");
 const zoomValue = document.querySelector("#zoomValue");
 const currentNodeText = document.querySelector("#currentNodeText");
 const nextNodeText = document.querySelector("#nextNodeText");
+const imageViewer = createImageViewer();
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const layout = {
@@ -53,6 +54,15 @@ zoomSlider.addEventListener("input", (event) => {
   render();
 });
 window.addEventListener("keydown", (event) => {
+  if (imageViewer.isOpen()) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      imageViewer.close();
+    }
+
+    return;
+  }
+
   if (event.key === "ArrowDown") {
     event.preventDefault();
     setActiveIndex(activeIndex + 1);
@@ -502,8 +512,19 @@ function createNodeContent() {
   const title = document.createElement("span");
   title.classList.add("node-title");
 
-  const imageWrap = document.createElement("span");
+  const imageWrap = document.createElement("button");
+  imageWrap.type = "button";
   imageWrap.classList.add("node-image");
+  imageWrap.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const src = imageWrap.dataset.previewSrc;
+    if (src) {
+      imageViewer.open(src, imageWrap.dataset.previewAlt || "节点插图");
+    }
+  });
+  imageWrap.addEventListener("keydown", (event) => {
+    event.stopPropagation();
+  });
 
   const image = document.createElement("img");
   imageWrap.appendChild(image);
@@ -528,10 +549,65 @@ function updateNodeContent(content, node, isActive) {
     }
 
     content.image.alt = `${formatInlineLabel(node.label)} 插图`;
+    content.imageWrap.disabled = false;
+    content.imageWrap.dataset.previewSrc = node.image;
+    content.imageWrap.dataset.previewAlt = content.image.alt;
+    content.imageWrap.setAttribute("aria-label", `放大查看 ${content.image.alt}`);
   } else {
     content.image.removeAttribute("src");
     content.image.alt = "";
+    content.imageWrap.disabled = true;
+    delete content.imageWrap.dataset.previewSrc;
+    delete content.imageWrap.dataset.previewAlt;
+    content.imageWrap.removeAttribute("aria-label");
   }
+}
+
+function createImageViewer() {
+  const overlay = document.createElement("div");
+  overlay.classList.add("image-viewer");
+  overlay.setAttribute("aria-hidden", "true");
+
+  const frame = document.createElement("div");
+  frame.classList.add("image-viewer-frame");
+  frame.setAttribute("role", "dialog");
+  frame.setAttribute("aria-modal", "true");
+  frame.setAttribute("aria-label", "插图大图预览，点击任意位置关闭");
+
+  const image = document.createElement("img");
+  image.classList.add("image-viewer-img");
+  let returnFocusTarget = null;
+
+  frame.append(image);
+  overlay.append(frame);
+  document.body.append(overlay);
+
+  function open(src, alt) {
+    returnFocusTarget = document.activeElement;
+    image.src = src;
+    image.alt = alt;
+    overlay.classList.add("open");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.classList.add("image-viewer-open");
+  }
+
+  function close() {
+    overlay.classList.remove("open");
+    overlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("image-viewer-open");
+    if (returnFocusTarget && document.contains(returnFocusTarget)) {
+      returnFocusTarget.focus();
+    }
+    returnFocusTarget = null;
+  }
+
+  overlay.addEventListener("click", close);
+
+  return {
+    open,
+    close,
+    isOpen: () => overlay.classList.contains("open"),
+  };
 }
 
 function syncLinks(links) {

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" role="img" aria-label="Animation illustration">
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620" role="img" aria-label="Animation illustration">
   <rect width="960" height="620" fill="#f7f6f0"/>
   <circle cx="260" cy="320" r="92" fill="#eef7f3" stroke="#183a4a" stroke-width="6"/>
   <circle cx="480" cy="320" r="118" fill="#fffdf8" stroke="#d8894f" stroke-width="8"/>

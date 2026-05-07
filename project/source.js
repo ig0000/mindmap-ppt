@@ -1,7 +1,7 @@
 export const sourceMarkdown = `
 - Mindmap PPT
   会讲故事的思维导图
-  @image overview.svg
+  @image portrait-demo.svg
     - 适合谁用
       把文稿讲成导图
       @image flow.svg
