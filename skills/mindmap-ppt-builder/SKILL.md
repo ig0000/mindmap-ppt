@@ -15,19 +15,25 @@ Read `references/project-format.md` when you need exact project file conventions
 
 Use this skill inside the `agegr/mindmap-ppt` repository root.
 
-- If the repository is not available locally, clone `https://github.com/agegr/mindmap-ppt` into the current working directory by default, then enter the cloned repo.
-- After cloning or opening the repo, run this skill from the repo root that contains `package.json`, `index.html`, `src/`, and `project/`.
+- If the current directory already contains `package.json`, `index.html`, `src/`, and `project/`, treat it as the repo root.
+- If the repo is not present, clone `https://github.com/agegr/mindmap-ppt` into the current working directory as a folder named `mindmap-ppt`, then enter that folder.
+- If a `mindmap-ppt` path already exists but is not this repo, stop and ask the user where to place the clone.
 - Keep the application repository outside the skill folder. Do not copy or clone `index.html`, `src/`, or `project/` into `.agents/skills/mindmap-ppt-builder/`.
 - Normal skill output should modify only `project/source.js` and local asset files under `project/`.
+- Do not delete existing project assets unless the user explicitly asks for cleanup.
 - Do not edit `src/`, `index.html`, or application behavior unless the user explicitly asks for implementation changes.
 
 ## Workflow
 
 1. Get the user's source document:
    - Use pasted text from the conversation when provided.
-   - If the user gives a local file path, read that file and use its contents.
+   - If the user gives a local file path, read only that explicitly provided document file and use its contents.
    - If neither pasted text nor a readable local file is available, ask the user for the document before generating `project/source.js`.
 2. Read the document and identify the presentation thesis.
+   - Follow the source language by default: Chinese input -> Chinese output; English input -> English output.
+   - For English output, still use an eyebrow/headline structure for two-line nodes when natural.
+   - Do not silently correct facts. If the source has obvious contradictions or questionable claims, preserve the claim carefully or mention the conflict to the user.
+   - For very long documents, preserve the original chapter structure first. If the material is too broad to reduce confidently, draft a high-level outline and ask the user to confirm priorities before finalizing.
 3. Build a shallow tree:
    - root: document/source name or presentation topic
    - level 1: 2-4 major sections
@@ -40,17 +46,16 @@ Use this skill inside the `agegr/mindmap-ppt` repository root.
   主标题
 ```
 
-Use the first line as a short category label and the second line as the main message. Keep each line under about 30 Chinese characters or 8 English words.
+Use the first line as a short category label and the second line as the main message. Keep each line under about 30 Chinese characters or 8 English words. Prefer two-line labels for all visible nodes; use a single-line node only when the label is already extremely short and clear.
 
 5. Choose image nodes sparingly:
    - Node images are optional.
    - A mind-map necessarily omits a lot of source detail; use images to preserve or explain the omitted detail on high-information nodes.
-   - Pick 3-8 high-information nodes for a typical deck.
+   - Pick 3-8 high-information nodes for a typical deck; short drafts may use 0-2 images.
    - Prefer nodes that summarize a process, architecture, comparison, timeline, metric, or conceptual model.
-   - Do not image every leaf.
-   - Avoid images for purely transitional or obvious nodes.
 6. Generate illustrations for chosen nodes with GPT Image 2 or the available image generation tool. Save them under `project/` or a subfolder of `project/`.
-   - If API details are needed, consult current official OpenAI image generation docs before writing code or commands.
+   - Prefer PNG for generated raster illustrations, SVG for simple diagram placeholders, and JPG only for photo-like assets.
+   - If image generation is unavailable, either omit images or create simple SVG placeholder diagrams under `project/` using the same restrained palette. Use 16:10 composition, no text inside images, and descriptive kebab-case filenames such as `project/demo-flow.svg`.
 7. Reference images in Markdown metadata lines:
 
 ```md
@@ -65,8 +70,10 @@ export const sourceMarkdown = `
 `;
 ```
 
+Escape backticks and `${...}` sequences before writing user-derived text inside the JavaScript template string.
+
 9. Run `npm run check`.
-10. If possible, run or refresh the local page and inspect several early, middle, and late preorder nodes.
+10. Optional visual validation: run `npm run dev` and inspect `http://127.0.0.1:5173/` when browser inspection is available.
 
 ## Markdown And Image Example
 
@@ -108,23 +115,26 @@ Composition: centered, generous whitespace, readable at thumbnail size, aspect r
 
 If the source needs a real chart, diagram, or screenshot, create a simple diagrammatic illustration instead of inventing precise numbers. Do not put text in images; labels belong in nodes.
 
+## SVG Placeholder Pattern
+
+When no image-generation tool is available but an illustration is still useful, a simple SVG placeholder is acceptable:
+
+- Size: `1280x800`.
+- Style: warm off-white background, dark teal `#183a4a`, muted green `#eef7f3`, orange accent `#d8894f`.
+- Content: abstract process blocks, arrows, cards, or timeline shapes based on the node idea.
+- No readable text, logos, dense decoration, or photorealism.
+
 ## Authoring Rules
 
 - Preserve the user's argument. Do not flatten important causal relationships into generic slogans.
 - Keep the preorder reveal useful: each next node should add a clear idea.
-- Put implementation details and examples in leaves; put conclusions in ancestors.
 - Use `@image` only after the node's title line, before its children.
 - Use PNG, JPG/JPEG, or SVG assets.
 - Save image files under `project/` or a subfolder of `project/`.
 - Prefer short `@image` values relative to `project/`, e.g. `@image user-journey.png`, `@image diagrams/user-journey.png`, or `@image image-asset-1/a.jpg`.
-- If no image-generation tool is available, still add good `@image` filenames only if you create placeholder assets; otherwise omit `@image` and tell the user images were not generated.
 
 ## Validation Checklist
 
 - `project/source.js` exports `sourceMarkdown`.
-- Markdown indentation uses 4 spaces per level for child nodes.
-- Continuation lines use the same indentation as metadata/text for that node.
-- `@image` values are short paths relative to `project/`, unless a full URL or explicit relative path is required.
 - Asset files exist for every `@image`.
-- Root has two lines: eyebrow/subtitle then main title.
 - `npm run check` passes.
