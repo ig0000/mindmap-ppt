@@ -11,6 +11,15 @@ Turn a source document into a presentation-ready `project/source.js` for this re
 
 Read `references/project-format.md` when you need exact project file conventions or visual constraints.
 
+## Workspace Requirement
+
+Use this skill inside the `agegr/mindmap-ppt` repository root.
+
+- If the repository is not available locally, clone `https://github.com/agegr/mindmap-ppt` first.
+- After cloning or opening the repo, run this skill from the repo root that contains `package.json`, `index.html`, `src/`, and `project/`.
+- Normal skill output should modify only `project/source.js` and files under `project/assets/illustrations/`.
+- Do not edit `src/`, `index.html`, or application behavior unless the user explicitly asks for implementation changes.
+
 ## Workflow
 
 1. Read the user's document and identify the presentation thesis.
