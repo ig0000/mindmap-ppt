@@ -75,6 +75,20 @@ Escape backticks and `${...}` sequences before writing user-derived text inside 
 9. Run `npm run check`.
 10. Optional visual validation: run `npm run dev` and inspect `http://127.0.0.1:5173/` when browser inspection is available.
 
+## Mindmap Authoring Rules
+
+- Follow the source order. This app reveals nodes in preorder: parent first, then all children. Do not move conclusions from later text into earlier parent labels.
+- Do not repeat the root topic in child nodes. If the root already states the problem or theme, children should advance the story.
+- Group nearby meanings under one parent. Keep backgrounds, criteria, risks, product/tool inventories, recommendations, and conclusions in their own coherent branches.
+- Main nodes carry judgments; child nodes carry evidence, reasons, examples, or supplements. If a node explains another node, make it a child, not a sibling.
+- Keep each parent to at most 5 children. If there are more, add grouping nodes.
+- Split tools/products only when the source analyzes them one by one. Merge them when the source merely lists options in passing.
+- Do not split sentence by sentence. One node should carry one complete small point.
+- Each node should correspond to about 10-80 Chinese characters of source material. Less than 10 is usually too fragmented; more than 80 usually needs splitting.
+- Node text may be slightly longer than a normal title, but one node should not contain multiple independent ideas.
+- Parent labels should summarize and navigate; child labels should reveal specifics. Avoid parent labels that spoil later details.
+- Put images on high-information nodes, such as framework, comparison, inventory, recommendation, or risk-model nodes. Avoid images on very small detail nodes.
+
 ## Markdown And Image Example
 
 Use `@image` as a metadata continuation line after the node's visible two-line label. The `@image` line is not displayed as node text.
