@@ -24,6 +24,8 @@ const svg = document.querySelector("#mindmap");
 const counter = document.querySelector("#counter");
 const prevButton = document.querySelector("#prevButton");
 const nextButton = document.querySelector("#nextButton");
+const nodeSlider = document.querySelector("#nodeSlider");
+const sliderLabel = document.querySelector("#sliderLabel");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const layout = {
@@ -48,9 +50,13 @@ let renderedLinks = new Map();
 assignTreeMetadata(root);
 preorder = collectPreorder(root);
 idToNode = new Map(preorder.map((node) => [node.id, node]));
+nodeSlider.max = String(preorder.length - 1);
 
 prevButton.addEventListener("click", () => setActiveIndex(activeIndex - 1));
 nextButton.addEventListener("click", () => setActiveIndex(activeIndex + 1));
+nodeSlider.addEventListener("input", (event) => {
+  setActiveIndex(Number(event.target.value));
+});
 window.addEventListener("keydown", (event) => {
   if (event.key === "ArrowDown") {
     event.preventDefault();
@@ -376,7 +382,11 @@ function linkPath(from, to) {
 }
 
 function updateControls() {
+  const activeNode = preorder[activeIndex];
   counter.textContent = `${activeIndex + 1} / ${preorder.length}`;
+  nodeSlider.value = String(activeIndex);
+  nodeSlider.style.setProperty("--slider-progress", `${(activeIndex / (preorder.length - 1)) * 100}%`);
+  sliderLabel.textContent = activeNode.label;
   prevButton.disabled = activeIndex === 0;
   nextButton.disabled = activeIndex === preorder.length - 1;
 }
