@@ -1,5 +1,6 @@
 import { sourceMarkdown } from "../project/source.js";
 
+const presentationFrame = document.querySelector(".presentation-frame");
 const mindmap = document.querySelector("#mindmap");
 const mapLayer = document.querySelector("#mapLayer");
 const linkLayer = document.querySelector("#linkLayer");
@@ -37,12 +38,16 @@ let renderedLinks = new Map();
 let cameraTargetIndex = null;
 let currentNodeMetrics = new Map();
 let cameraZoom = Number(zoomSlider.value) / 100;
+let pointerGlowTarget = { x: 0.5, y: 0.42, opacity: 0 };
+let pointerGlowCurrent = { x: 0.5, y: 0.42, opacity: 0 };
+let pointerGlowFrame = 0;
 
 assignTreeMetadata(root);
 preorder = collectPreorder(root);
 idToNode = new Map(preorder.map((node) => [node.id, node]));
 nodeSlider.max = String(preorder.length - 1);
 updateDeckHeading(root.label);
+syncPointerGlow();
 
 prevButton.addEventListener("click", () => setActiveIndex(activeIndex - 1));
 nextButton.addEventListener("click", () => setActiveIndex(activeIndex + 1));
@@ -74,6 +79,12 @@ window.addEventListener("keydown", (event) => {
   }
 });
 window.addEventListener("resize", () => render());
+presentationFrame.addEventListener("pointermove", handlePointerGlowMove);
+presentationFrame.addEventListener("pointerenter", handlePointerGlowMove);
+presentationFrame.addEventListener("pointerleave", () => {
+  pointerGlowTarget = { ...pointerGlowTarget, opacity: 0 };
+  startPointerGlowAnimation();
+});
 
 render();
 
@@ -149,6 +160,10 @@ function resolveImagePath(path) {
   return `./project/${path}`;
 }
 
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
 function collectPreorder(node, list = []) {
   list.push(node);
   node.children.forEach((child) => collectPreorder(child, list));
@@ -159,6 +174,54 @@ function setActiveIndex(index) {
   activeIndex = Math.max(0, Math.min(index, preorder.length - 1));
   cameraTargetIndex = null;
   render();
+}
+
+function handlePointerGlowMove(event) {
+  const rect = presentationFrame.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    return;
+  }
+
+  const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
+  const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
+  const edgeDistance = Math.min(x, 1 - x, y, 1 - y);
+
+  pointerGlowTarget = {
+    x,
+    y,
+    opacity: 0.22 + clamp(edgeDistance * 0.46, 0, 0.24),
+  };
+  startPointerGlowAnimation();
+}
+
+function startPointerGlowAnimation() {
+  if (pointerGlowFrame) {
+    return;
+  }
+
+  pointerGlowFrame = window.requestAnimationFrame(stepPointerGlowAnimation);
+}
+
+function stepPointerGlowAnimation() {
+  pointerGlowFrame = 0;
+  pointerGlowCurrent.x += (pointerGlowTarget.x - pointerGlowCurrent.x) * 0.12;
+  pointerGlowCurrent.y += (pointerGlowTarget.y - pointerGlowCurrent.y) * 0.12;
+  pointerGlowCurrent.opacity += (pointerGlowTarget.opacity - pointerGlowCurrent.opacity) * 0.1;
+  syncPointerGlow();
+
+  if (
+    Math.abs(pointerGlowTarget.x - pointerGlowCurrent.x) > 0.001 ||
+    Math.abs(pointerGlowTarget.y - pointerGlowCurrent.y) > 0.001 ||
+    Math.abs(pointerGlowTarget.opacity - pointerGlowCurrent.opacity) > 0.002
+  ) {
+    pointerGlowFrame = window.requestAnimationFrame(stepPointerGlowAnimation);
+  }
+}
+
+function syncPointerGlow() {
+  presentationFrame.style.setProperty("--pointer-glow-x", `${(pointerGlowCurrent.x * 100).toFixed(2)}%`);
+  presentationFrame.style.setProperty("--pointer-glow-y", `${(pointerGlowCurrent.y * 100).toFixed(2)}%`);
+  presentationFrame.style.setProperty("--pointer-glow-opacity", pointerGlowCurrent.opacity.toFixed(3));
 }
 
 function render() {
