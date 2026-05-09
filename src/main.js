@@ -1,6 +1,5 @@
 import { sourceMarkdown } from "../project/source.js";
 
-const presentationFrame = document.querySelector(".presentation-frame");
 const mindmap = document.querySelector("#mindmap");
 const mapLayer = document.querySelector("#mapLayer");
 const linkLayer = document.querySelector("#linkLayer");
@@ -13,8 +12,9 @@ const nextButton = document.querySelector("#nextButton");
 const nodeSlider = document.querySelector("#nodeSlider");
 const zoomSlider = document.querySelector("#zoomSlider");
 const zoomValue = document.querySelector("#zoomValue");
-const currentNodeText = document.querySelector("#currentNodeText");
-const nextNodeText = document.querySelector("#nextNodeText");
+const nextNodePreview = document.querySelector("#nextNodePreview");
+const nextNodeSubtitle = document.querySelector("#nextNodeSubtitle");
+const nextNodeTitle = document.querySelector("#nextNodeTitle");
 const imageViewer = createImageViewer();
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -38,16 +38,12 @@ let renderedLinks = new Map();
 let cameraTargetIndex = null;
 let currentNodeMetrics = new Map();
 let cameraZoom = Number(zoomSlider.value) / 100;
-let pointerGlowTarget = { x: 0.5, y: 0.42, opacity: 0 };
-let pointerGlowCurrent = { x: 0.5, y: 0.42, opacity: 0 };
-let pointerGlowFrame = 0;
 
 assignTreeMetadata(root);
 preorder = collectPreorder(root);
 idToNode = new Map(preorder.map((node) => [node.id, node]));
 nodeSlider.max = String(preorder.length - 1);
 updateDeckHeading(root.label);
-syncPointerGlow();
 
 prevButton.addEventListener("click", () => setActiveIndex(activeIndex - 1));
 nextButton.addEventListener("click", () => setActiveIndex(activeIndex + 1));
@@ -79,12 +75,6 @@ window.addEventListener("keydown", (event) => {
   }
 });
 window.addEventListener("resize", () => render());
-presentationFrame.addEventListener("pointermove", handlePointerGlowMove);
-presentationFrame.addEventListener("pointerenter", handlePointerGlowMove);
-presentationFrame.addEventListener("pointerleave", () => {
-  pointerGlowTarget = { ...pointerGlowTarget, opacity: 0 };
-  startPointerGlowAnimation();
-});
 
 render();
 
@@ -174,54 +164,6 @@ function setActiveIndex(index) {
   activeIndex = Math.max(0, Math.min(index, preorder.length - 1));
   cameraTargetIndex = null;
   render();
-}
-
-function handlePointerGlowMove(event) {
-  const rect = presentationFrame.getBoundingClientRect();
-  if (!rect.width || !rect.height) {
-    return;
-  }
-
-  const x = clamp((event.clientX - rect.left) / rect.width, 0, 1);
-  const y = clamp((event.clientY - rect.top) / rect.height, 0, 1);
-  const edgeDistance = Math.min(x, 1 - x, y, 1 - y);
-
-  pointerGlowTarget = {
-    x,
-    y,
-    opacity: 0.22 + clamp(edgeDistance * 0.46, 0, 0.24),
-  };
-  startPointerGlowAnimation();
-}
-
-function startPointerGlowAnimation() {
-  if (pointerGlowFrame) {
-    return;
-  }
-
-  pointerGlowFrame = window.requestAnimationFrame(stepPointerGlowAnimation);
-}
-
-function stepPointerGlowAnimation() {
-  pointerGlowFrame = 0;
-  pointerGlowCurrent.x += (pointerGlowTarget.x - pointerGlowCurrent.x) * 0.12;
-  pointerGlowCurrent.y += (pointerGlowTarget.y - pointerGlowCurrent.y) * 0.12;
-  pointerGlowCurrent.opacity += (pointerGlowTarget.opacity - pointerGlowCurrent.opacity) * 0.1;
-  syncPointerGlow();
-
-  if (
-    Math.abs(pointerGlowTarget.x - pointerGlowCurrent.x) > 0.001 ||
-    Math.abs(pointerGlowTarget.y - pointerGlowCurrent.y) > 0.001 ||
-    Math.abs(pointerGlowTarget.opacity - pointerGlowCurrent.opacity) > 0.002
-  ) {
-    pointerGlowFrame = window.requestAnimationFrame(stepPointerGlowAnimation);
-  }
-}
-
-function syncPointerGlow() {
-  presentationFrame.style.setProperty("--pointer-glow-x", `${(pointerGlowCurrent.x * 100).toFixed(2)}%`);
-  presentationFrame.style.setProperty("--pointer-glow-y", `${(pointerGlowCurrent.y * 100).toFixed(2)}%`);
-  presentationFrame.style.setProperty("--pointer-glow-opacity", pointerGlowCurrent.opacity.toFixed(3));
 }
 
 function render() {
@@ -725,14 +667,22 @@ function updateControls() {
   const activeNode = preorder[activeIndex];
   const nextNode = preorder[activeIndex + 1];
   const sliderProgress = preorder.length <= 1 ? 0 : (activeIndex / (preorder.length - 1)) * 100;
+  const label = nextNode
+    ? splitLabel(nextNode.label)
+    : {
+        hasSubtitle: true,
+        subtitle: "下一步",
+        title: "结束",
+      };
 
   counter.textContent = `${activeIndex + 1} / ${preorder.length}`;
   nodeSlider.value = String(activeIndex);
   nodeSlider.style.setProperty("--slider-progress", `${sliderProgress}%`);
   zoomSlider.value = String(Math.round(cameraZoom * 100));
   zoomValue.textContent = `${Math.round(cameraZoom * 100)}%`;
-  currentNodeText.textContent = formatInlineLabel(activeNode.label);
-  nextNodeText.textContent = nextNode ? formatInlineLabel(nextNode.label) : "结束";
+  nextNodePreview.classList.toggle("has-subtitle", label.hasSubtitle);
+  nextNodeSubtitle.textContent = label.subtitle;
+  nextNodeTitle.textContent = label.title;
   prevButton.disabled = activeIndex === 0;
   nextButton.disabled = activeIndex === preorder.length - 1;
 }
@@ -750,8 +700,11 @@ function formatInlineLabel(label) {
 
 function splitLabel(label) {
   const [subtitle, ...titleLines] = label.split("\n");
+  const hasSubtitle = titleLines.length > 0;
+
   return {
+    hasSubtitle,
     subtitle,
-    title: titleLines.length > 0 ? titleLines.join("\n") : subtitle,
+    title: hasSubtitle ? titleLines.join("\n") : subtitle,
   };
 }

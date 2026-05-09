@@ -15,7 +15,6 @@
             <div class="node-layer" id="nodeLayer"></div>
           </div>
         </div>
-        <div class="pointer-glow" aria-hidden="true"></div>
 
         <section class="floating-ui" aria-label="Presentation controls">
           <div class="title-panel glass-panel">
@@ -30,13 +29,15 @@
                 <span class="counter" id="counter">1 / 1</span>
               </label>
               <div class="node-readout" aria-live="polite">
-                <div class="readout-item readout-current">
-                  <span class="readout-label">当前</span>
-                  <strong id="currentNodeText">root</strong>
-                </div>
-                <div class="readout-item">
-                  <span class="readout-label">下一个</span>
-                  <strong id="nextNodeText">a</strong>
+                <div class="readout-card">
+                  <div class="readout-icon" aria-hidden="true">
+                    <span>N E</span>
+                    <span>X T</span>
+                  </div>
+                  <div class="node-content has-subtitle" id="nextNodePreview">
+                    <span class="node-subtitle" id="nextNodeSubtitle">即将进入</span>
+                    <span class="node-title" id="nextNodeTitle">root</span>
+                  </div>
                 </div>
                 <label class="zoom-control" for="zoomSlider">
                   <span class="readout-label">远近</span>
