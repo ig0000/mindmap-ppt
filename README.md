@@ -80,11 +80,18 @@ npx skills add agegr/mindmap-ppt --skill mindmap-ppt-builder --agent codex --glo
 
 Agent 通常会处理 `project/source.js`、图片素材、`@image` 引用、基础检查和本地预览。你只需要确认最终演示效果；除非要调整交互、布局或动画，不必修改 `src/` 与 `index.html`。
 
+## 从零开发提示词
+
+[p.md](p.md) 是最初产品开发的提示词。
+
+如果你想复刻这个项目、做一个变体，或者把相同交互迁移到别的技术栈，可以把 `p.md` 作为起点，再补充你的视觉风格、数据格式或部署要求。
+
 ## 项目结构
 
 ```text
 .
 ├── index.html              # 页面结构和控制区
+├── p.md                    # 最初产品开发的提示词
 ├── src/
 │   ├── main.js             # Markdown 解析、布局、导航和渲染逻辑
 │   └── styles.css          # 视觉样式、节点动画和响应式布局
