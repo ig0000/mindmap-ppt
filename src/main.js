@@ -28,6 +28,10 @@ const layout = {
   centerBaseline: 520,
   cameraTargetCenterBand: 0.4,
 };
+const wheelNavigation = {
+  threshold: 72,
+  idleResetMs: 180,
+};
 
 let activeIndex = 0;
 let root = parseMarkdownTree(sourceMarkdown);
@@ -38,11 +42,13 @@ let renderedLinks = new Map();
 let cameraTargetIndex = null;
 let currentNodeMetrics = new Map();
 let cameraZoom = Number(zoomSlider.value) / 100;
+let wheelDeltaBuffer = 0;
+let wheelNavigationTimer = null;
 
 assignTreeMetadata(root);
 preorder = collectPreorder(root);
 idToNode = new Map(preorder.map((node) => [node.id, node]));
-nodeSlider.max = String(preorder.length - 1);
+nodeSlider.max = String(preorder.length);
 updateDeckHeading(root.label);
 
 prevButton.addEventListener("click", () => setActiveIndex(activeIndex - 1));
@@ -54,7 +60,13 @@ zoomSlider.addEventListener("input", (event) => {
   cameraZoom = Number(event.target.value) / 100;
   render();
 });
-window.addEventListener("keydown", (event) => {
+window.addEventListener("keydown", handleKeydown);
+window.addEventListener("wheel", handleWheel, { passive: false });
+window.addEventListener("resize", () => render());
+
+render();
+
+function handleKeydown(event) {
   if (imageViewer.isOpen()) {
     if (event.key === "Escape") {
       event.preventDefault();
@@ -64,19 +76,64 @@ window.addEventListener("keydown", (event) => {
     return;
   }
 
-  if (event.key === "ArrowDown") {
+  const stepByKey = {
+    ArrowDown: 1,
+    PageDown: 1,
+    ArrowUp: -1,
+    PageUp: -1,
+  };
+  const step = stepByKey[event.key];
+  if (step) {
     event.preventDefault();
-    setActiveIndex(activeIndex + 1);
+    setActiveIndex(activeIndex + step);
+  }
+}
+
+function handleWheel(event) {
+  if (imageViewer.isOpen() || event.ctrlKey || event.metaKey) {
+    return;
   }
 
-  if (event.key === "ArrowUp") {
-    event.preventDefault();
-    setActiveIndex(activeIndex - 1);
+  const deltaY = normalizeWheelDeltaY(event);
+  if (Math.abs(deltaY) < 1) {
+    return;
   }
-});
-window.addEventListener("resize", () => render());
 
-render();
+  event.preventDefault();
+
+  if (wheelDeltaBuffer !== 0 && Math.sign(wheelDeltaBuffer) !== Math.sign(deltaY)) {
+    wheelDeltaBuffer = 0;
+  }
+  wheelDeltaBuffer += deltaY;
+  const step = Math.trunc(wheelDeltaBuffer / wheelNavigation.threshold);
+  if (step === 0) {
+    scheduleWheelBufferReset();
+    return;
+  }
+
+  setActiveIndex(activeIndex + step);
+  wheelDeltaBuffer -= step * wheelNavigation.threshold;
+  scheduleWheelBufferReset();
+}
+
+function scheduleWheelBufferReset() {
+  window.clearTimeout(wheelNavigationTimer);
+  wheelNavigationTimer = window.setTimeout(() => {
+    wheelDeltaBuffer = 0;
+  }, wheelNavigation.idleResetMs);
+}
+
+function normalizeWheelDeltaY(event) {
+  if (event.deltaMode === 1) {
+    return event.deltaY * 16;
+  }
+
+  if (event.deltaMode === 2) {
+    return event.deltaY * getViewportSize().height;
+  }
+
+  return event.deltaY;
+}
 
 function parseMarkdownTree(markdown) {
   const stack = [];
@@ -161,15 +218,15 @@ function collectPreorder(node, list = []) {
 }
 
 function setActiveIndex(index) {
-  activeIndex = Math.max(0, Math.min(index, preorder.length - 1));
+  activeIndex = Math.max(0, Math.min(index, preorder.length));
   cameraTargetIndex = null;
   render();
 }
 
 function render() {
-  const activeNode = preorder[activeIndex];
+  const activeNode = preorder[activeIndex] ?? null;
   currentNodeMetrics = measureAllNodes(preorder, activeNode);
-  const model = buildVisibleModel(activeNode);
+  const model = activeNode ? buildVisibleModel(activeNode) : buildEndModel();
   const viewport = computeViewport(model, cameraTargetIndex);
 
   syncLinks(model.links);
@@ -186,7 +243,7 @@ function measureAllNodes(nodes, activeNode) {
   const metrics = new Map();
   nodes.forEach((node) => {
     const content = createNodeContent();
-    updateNodeContent(content, node, node.id === activeNode.id);
+    updateNodeContent(content, node, node.id === activeNode?.id);
     measurer.appendChild(content.root);
 
     const rect = content.root.getBoundingClientRect();
@@ -200,6 +257,56 @@ function measureAllNodes(nodes, activeNode) {
 
   measurer.remove();
   return metrics;
+}
+
+function buildEndModel() {
+  const visibleIds = new Set(preorder.map((node) => node.id));
+  const positions = new Map();
+  const nodes = [];
+  const links = [];
+  const rootMetric = getNodeMetric(root);
+
+  placeSubtree(root, visibleIds, positions, {
+    x: layout.stagePaddingX + rootMetric.width / 2,
+    y: layout.centerBaseline,
+  });
+
+  visibleIds.forEach((id) => {
+    const node = idToNode.get(id);
+    const position = positions.get(id);
+    if (!position) {
+      return;
+    }
+
+    nodes.push({
+      id,
+      label: node.label,
+      x: position.x,
+      y: position.y,
+      width: getNodeMetric(node).width,
+      height: getNodeMetric(node).height,
+      depth: node.depth,
+      preorderIndex: node.preorderIndex,
+      isPath: false,
+      isActive: false,
+      isComplete: false,
+    });
+
+    if (node.parent && positions.has(node.parent.id)) {
+      const parentMetric = getNodeMetric(node.parent);
+      const nodeMetric = getNodeMetric(node);
+      links.push({
+        id: `${node.parent.id}->${node.id}`,
+        from: positions.get(node.parent.id),
+        fromWidth: parentMetric.width,
+        to: position,
+        toWidth: nodeMetric.width,
+        isPathLink: false,
+      });
+    }
+  });
+
+  return { nodes, links, baseline: layout.centerBaseline, isEnd: true };
 }
 
 function buildVisibleModel(activeNode) {
@@ -364,6 +471,10 @@ function computeViewport(model, targetIndex = null) {
     return { x: 0, y: 0, width: logicalViewport.width, height: logicalViewport.height };
   }
 
+  if (model.isEnd) {
+    return computeEndViewport(model, logicalViewport, targetIndex);
+  }
+
   const pathNodes = model.nodes.filter((node) => node.isPath);
   const pathMinX = Math.min(...pathNodes.map((node) => node.x - node.width / 2));
   const pathMaxX = Math.max(...pathNodes.map((node) => node.x + node.width / 2));
@@ -385,6 +496,44 @@ function computeViewport(model, targetIndex = null) {
     width: logicalViewport.width,
     height: logicalViewport.height,
   };
+}
+
+function computeEndViewport(model, logicalViewport, targetIndex = null) {
+  const bounds = computeModelBounds(model.nodes);
+  const graphCenterX = (bounds.minX + bounds.maxX) / 2;
+  const graphCenterY = (bounds.minY + bounds.maxY) / 2;
+  const targetNode = model.nodes.find((node) => node.preorderIndex === targetIndex);
+  let viewportX = graphCenterX - logicalViewport.width / 2;
+  let viewportY = graphCenterY - logicalViewport.height / 2;
+
+  if (targetNode) {
+    viewportX = keepNodeInCenterBand(viewportX, logicalViewport.width, targetNode.x, layout.cameraTargetCenterBand);
+    viewportY = keepNodeInCenterBand(viewportY, logicalViewport.height, targetNode.y, layout.cameraTargetCenterBand);
+  }
+
+  return {
+    x: viewportX,
+    y: viewportY,
+    width: logicalViewport.width,
+    height: logicalViewport.height,
+  };
+}
+
+function computeModelBounds(nodes) {
+  return nodes.reduce(
+    (bounds, node) => ({
+      minX: Math.min(bounds.minX, node.x - node.width / 2),
+      maxX: Math.max(bounds.maxX, node.x + node.width / 2),
+      minY: Math.min(bounds.minY, node.y - node.height / 2),
+      maxY: Math.max(bounds.maxY, node.y + node.height / 2),
+    }),
+    {
+      minX: Infinity,
+      maxX: -Infinity,
+      minY: Infinity,
+      maxY: -Infinity,
+    },
+  );
 }
 
 function keepNodeInCenterBand(viewportStart, viewportSize, nodeCenter, centerBandRatio) {
@@ -465,7 +614,11 @@ function syncNodes(nodes, activeNode) {
       entry.group.classList.toggle("complete-node", node.isComplete);
       entry.group.classList.toggle("camera-target", node.preorderIndex === cameraTargetIndex);
       entry.group.dataset.nodeId = node.id;
-      entry.group.setAttribute("aria-current", node.id === activeNode.id ? "true" : "false");
+      if (activeNode && node.id === activeNode.id) {
+        entry.group.setAttribute("aria-current", "true");
+      } else {
+        entry.group.removeAttribute("aria-current");
+      }
       entry.group.setAttribute("aria-label", `查看 ${formatInlineLabel(node.label)} 的视角`);
       entry.group.style.width = `${node.width}px`;
       entry.group.style.height = `${node.height}px`;
@@ -666,16 +819,12 @@ function linkPath(link) {
 function updateControls() {
   const activeNode = preorder[activeIndex];
   const nextNode = preorder[activeIndex + 1];
-  const sliderProgress = preorder.length <= 1 ? 0 : (activeIndex / (preorder.length - 1)) * 100;
-  const label = nextNode
-    ? splitLabel(nextNode.label)
-    : {
-        hasSubtitle: true,
-        subtitle: "下一步",
-        title: "结束",
-      };
+  const endIndex = preorder.length;
+  const isEnd = activeIndex === endIndex;
+  const sliderProgress = endIndex === 0 ? 0 : (activeIndex / endIndex) * 100;
+  const label = getNextStepLabel(nextNode, isEnd);
 
-  counter.textContent = `${activeIndex + 1} / ${preorder.length}`;
+  counter.textContent = `${activeIndex + 1} / ${endIndex + 1}`;
   nodeSlider.value = String(activeIndex);
   nodeSlider.style.setProperty("--slider-progress", `${sliderProgress}%`);
   zoomSlider.value = String(Math.round(cameraZoom * 100));
@@ -684,7 +833,27 @@ function updateControls() {
   nextNodeSubtitle.textContent = label.subtitle;
   nextNodeTitle.textContent = label.title;
   prevButton.disabled = activeIndex === 0;
-  nextButton.disabled = activeIndex === preorder.length - 1;
+  nextButton.disabled = isEnd;
+}
+
+function getNextStepLabel(nextNode, isEnd) {
+  if (isEnd) {
+    return {
+      hasSubtitle: true,
+      subtitle: "当前",
+      title: "结束总览",
+    };
+  }
+
+  if (nextNode) {
+    return splitLabel(nextNode.label);
+  }
+
+  return {
+    hasSubtitle: true,
+    subtitle: "下一步",
+    title: "结束总览",
+  };
 }
 
 function updateDeckHeading(label) {
