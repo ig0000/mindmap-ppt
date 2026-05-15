@@ -1,6 +1,6 @@
 ---
 name: mindmap-ppt-builder
-description: Create or update content for the agegr/mindmap-ppt static presentation project from a prose draft, article, speech, report, or notes. Use when Codex needs to turn a written document into the project's project/source.js Markdown mind-map data, choose which nodes need illustrations, generate or request GPT Image 2 illustrations matching the project's restrained presentation style, place assets under project/, and validate the result with npm run check.
+description: Create or update content for the agegr/mindmap-ppt static presentation project from a prose draft, article, speech, report, or notes. Use when Codex needs to turn a written document into the project's project/source.js Markdown mind-map data, choose which nodes need illustrations, generate or request GPT Image 2 illustrations matching the project's restrained presentation style, place assets under project/, and validate the result with npm run check. Operates only within the current working directory.
 ---
 
 # Mindmap PPT Builder
@@ -13,11 +13,10 @@ Read `references/project-format.md` when you need exact project file conventions
 
 ## Workspace Requirement
 
-Use this skill inside the `agegr/mindmap-ppt` repository root.
+This skill operates only within the current working directory tree (cwd itself or a `mindmap-ppt/` subfolder under it). Do not search parent, sibling, or home directories for an existing checkout.
 
-- If the current directory already contains `package.json`, `index.html`, `src/`, and `project/`, treat it as the repo root.
-- If the repo is not present, clone `https://github.com/agegr/mindmap-ppt` into the current working directory as a folder named `mindmap-ppt`, then enter that folder.
-- If a `mindmap-ppt` path already exists but is not this repo, stop and ask the user where to place the clone.
+- Clone `https://github.com/agegr/mindmap-ppt` into `./mindmap-ppt/` under the current working directory and `cd` in.
+- If `./mindmap-ppt/` already exists, stop and ask the user how to proceed. Do not `cd ..`, `find`, or otherwise probe the filesystem to locate or create a checkout elsewhere.
 - Keep the application repository outside the skill folder. Do not copy or clone `index.html`, `src/`, or `project/` into `.agents/skills/mindmap-ppt-builder/`.
 - Normal skill output should modify only `project/source.js` and local asset files under `project/`.
 - Do not delete existing project assets unless the user explicitly asks for cleanup.
@@ -54,7 +53,7 @@ Use the first line as a short category label and the second line as the main mes
    - Pick 3-8 high-information nodes for a typical deck; short drafts may use 0-2 images.
    - Prefer nodes that summarize a process, architecture, comparison, timeline, metric, or conceptual model.
 6. Generate illustrations for chosen nodes with GPT Image 2 or the available image generation tool. Save them under `project/` or a subfolder of `project/`.
-   - Prefer PNG for generated raster illustrations, SVG for simple diagram placeholders, and JPG only for photo-like assets.
+   - Prefer PNG for generated raster illustrations, SVG for diagrams or placeholders, and JPG for photo-like assets.
    - If image generation is unavailable, either omit images or create simple SVG placeholder diagrams under `project/` using the same restrained palette. Use 16:10 composition, minimal short text only when useful, and descriptive kebab-case filenames such as `project/demo-flow.svg`.
 7. Reference images in Markdown metadata lines:
 
@@ -73,7 +72,7 @@ export const sourceMarkdown = `
 Escape backticks and `${...}` sequences before writing user-derived text inside the JavaScript template string.
 
 9. Run `npm run check`.
-10. Optional visual validation: run `npm run dev` and inspect `http://127.0.0.1:5173/` when browser inspection is available.
+10. Optional visual validation: run `npm run dev` and inspect the URL printed by Vite (default `http://127.0.0.1:5173/`, may differ if the port is taken) when browser inspection is available.
 
 ## Mindmap Authoring Rules
 
@@ -87,7 +86,7 @@ Escape backticks and `${...}` sequences before writing user-derived text inside 
 - Keep each parent to at most 5 children. If there are more, add grouping nodes.
 - Split tools/products only when the source analyzes them one by one. Merge them when the source merely lists options in passing.
 - Do not split sentence by sentence. One node should carry one complete small point.
-- Each node should correspond to about 10-80 Chinese characters of source material. Less than 10 is usually too fragmented; more than 80 usually needs splitting.
+- Each node should correspond to about 10-80 Chinese characters of source material (this is the source span a node covers, not its visible label length). Less than 10 is usually too fragmented; more than 80 usually needs splitting.
 - Node text may be slightly longer than a normal title, but one node should not contain multiple independent ideas.
 - Parent labels should summarize and navigate; child labels should reveal specifics. Avoid parent labels that spoil later details.
 - Put images on high-information nodes, such as framework, comparison, inventory, recommendation, or risk-model nodes. Avoid images on very small detail nodes.
@@ -141,10 +140,8 @@ When no image-generation tool is available but an illustration is still useful, 
 - Content: abstract process blocks, arrows, cards, or timeline shapes based on the node idea.
 - Minimal short text only when useful; no logos, dense decoration, or photorealism.
 
-## Authoring Rules
+## Image And Asset Rules
 
-- Preserve the user's argument. Do not flatten important causal relationships into generic slogans.
-- Keep the preorder reveal useful: each next node should add a clear idea.
 - Use `@image` only after the node's title line, before its children.
 - Use PNG, JPG/JPEG, or SVG assets.
 - Save image files under `project/` or a subfolder of `project/`.
